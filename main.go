@@ -13,25 +13,45 @@ import (
 	"text/tabwriter"
 )
 
-var cPkg = 0
-var cFiles = 0
-var cInternalFn = 0
-var cExportedFn = 0
-var cNoDocFn = 0
-var cWithDocFn = 0
+var goVal = &GoVal{0, 0, 0, 0, 0, 0, 0}
+var goDataMap = [] *GoData{}
 
 func main() {
 	fmt.Printf("Hello GoVal\n\n")
 
-	parseDir(".", true, false)
+	recursive := true // change this to flag
+	addDesc := true   // change this to flag
 
+	parseDir(".", recursive, addDesc)
+
+	tabwriterBasic()
+	tabwriterAdditional(addDesc)
+}
+
+func tabwriterBasic() {
 	w := new(tabwriter.Writer)
-	w.Init(os.Stdout, 0, 8, 2, '\t', tabwriter.TabIndent)
+	w.Init(os.Stdout, 0, 8, 3, '\t', tabwriter.TabIndent)
 	fmt.Fprintln(w, "Packages\tFiles\tFunctions\tInternal\tExported\tNo docs\tWith docs\t")
-	fmt.Fprintf(w, "%d\t%d\t%d\t%d\t%d\t%d\t%d\t", cPkg, cFiles, cInternalFn+cExportedFn, cInternalFn, cExportedFn, cNoDocFn, cWithDocFn)
+	fmt.Fprintf(w, "%d\t%d\t%d\t%d\t%d\t%d\t%d\t", goVal.Packages, goVal.Files, goVal.Functions, goVal.Internal, goVal.Exported, goVal.NoDocs, goVal.WithDocs)
 	fmt.Fprintln(w)
 	fmt.Fprintln(w)
 	w.Flush()
+}
+
+func tabwriterAdditional(addDesc bool) {
+	if addDesc {
+		wx := new(tabwriter.Writer)
+		wx.Init(os.Stdout, 0, 8, 3, '\t', tabwriter.TabIndent)
+		fmt.Fprintln(wx, "Package\tFile\tFunction\tLn. Start\tLn. End\tLines\t")
+
+		for i := range (goDataMap) {
+			goData := goDataMap[i]
+			fmt.Fprintf(wx, "%s\t%s\t%s\t%d\t%d\t%d\t", goData.Package, goData.File, goData.Function, goData.Start, goData.End, goData.Lines)
+			fmt.Fprintln(wx)
+		}
+		fmt.Fprintln(wx)
+		wx.Flush()
+	}
 }
 
 func parseDir(dir string, recursive bool, addDesc bool) {
@@ -59,47 +79,44 @@ func parseDir(dir string, recursive bool, addDesc bool) {
 	}
 
 	for _, pkg := range pkgs {
-		cPkg++
+		goVal.Packages++
 
 		funcs := []*ast.FuncDecl{}
 
-		w := new(tabwriter.Writer)
-		w.Init(os.Stdout, 0, 8, 8, '\t', tabwriter.TabIndent)
-		if addDesc {
-			fmt.Fprintln(w, "Package\tFile\tFunction\tLn. Start\tLn. End\tLines\t")
-		}
-
 		for file, f := range pkg.Files {
-			cFiles++
+			goVal.Files++
 
 			for _, d := range f.Decls {
 				if fn, isFn := d.(*ast.FuncDecl); isFn {
 					funcs = append(funcs, fn)
 
 					if addDesc {
-						fmt.Fprintf(w, "%s\t%s\t%s\t%d\t%d\t%d\t", pkg.Name, file, fn.Name.Name, fset.Position(fn.Pos()).Line, fset.Position(fn.End()).Line, (fset.Position(fn.End()).Line-fset.Position(fn.Pos()).Line)+1)
-						fmt.Fprintln(w)
+						var goData = &GoData{}
+						goData.Package = pkg.Name
+						goData.File = file
+						goData.Function = fn.Name.Name
+						goData.Start = fset.Position(fn.Pos()).Line
+						goData.End = fset.Position(fn.End()).Line
+						goData.Lines = (fset.Position(fn.End()).Line - fset.Position(fn.Pos()).Line) + 1
+
+						goDataMap = append(goDataMap, goData)
 					}
 
 					if fn.Doc.Text() == "" {
-						cNoDocFn++
+						goVal.NoDocs++
 					} else {
-						cWithDocFn++
+						goVal.WithDocs++
 					}
 
 					if fn.Name.IsExported() {
-						cExportedFn++
+						goVal.Exported++
 					} else {
-						cInternalFn++
+						goVal.Internal++
 					}
+					goVal.Functions = goVal.Exported + goVal.Internal
 				}
 			}
 		}
-		if addDesc {
-			fmt.Fprintln(w)
-			fmt.Fprintln(w)
-		}
-		w.Flush()
 	}
 
 	if recursive {
