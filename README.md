@@ -4,6 +4,12 @@ Small program to count stuff in your project, like number of packages, files, fu
 
 Some of this stuff can be excluded in the config
 
+
+```
+./GoVal --recursive=false --addDesc=false
+./GoVal --recursive=true --addDesc=true
+```
+
 ```
 Hello GoVal
 

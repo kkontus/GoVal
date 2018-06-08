@@ -7,6 +7,11 @@ import (
 	. "GoVal/util"
 )
 
+const (
+	RECURSIVE   string = "recursive"
+	DESCRIPTION string = "addDesc"
+)
+
 var skipFiles = []string{"metadata.go", "util.go"}
 
 func Filter(info os.FileInfo) bool {

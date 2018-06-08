@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"flag"
 	"os"
 	"go/parser"
 	"go/token"
@@ -19,13 +20,15 @@ var goDataMap = [] *GoData{}
 func main() {
 	fmt.Printf("Hello GoVal\n\n")
 
-	recursive := true // change this to flag
-	addDesc := true   // change this to flag
+	// define flags
+	recursive := flag.Bool(RECURSIVE, true, "command")
+	addDesc := flag.Bool(DESCRIPTION, true, "strategy")
+	flag.Parse()
 
-	parseDir(".", recursive, addDesc)
+	parseDir(".", *recursive, *addDesc)
 
 	tabwriterBasic()
-	tabwriterAdditional(addDesc)
+	tabwriterAdditional(*addDesc)
 }
 
 func tabwriterBasic() {
