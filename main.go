@@ -14,24 +14,24 @@ import (
 	"text/tabwriter"
 )
 
-var goVal = &GoVal{0, 0, 0, 0, 0, 0, 0}
-var goDataMap = [] *GoData{}
-
 func main() {
 	fmt.Printf("Hello GoVal\n\n")
 
 	// define flags
-	recursive := flag.Bool(RECURSIVE, true, "command")
-	addDesc := flag.Bool(DESCRIPTION, true, "strategy")
+	recursive := flag.Bool(RECURSIVE, true, "recursive")
+	addDesc := flag.Bool(DESCRIPTION, true, "addDesc")
 	flag.Parse()
 
-	parseDir(".", *recursive, *addDesc)
+	var goVal = &GoVal{0, 0, 0, 0, 0, 0, 0}
+	var goDataMap = [] GoData{}
 
-	tabwriterBasic()
-	tabwriterAdditional(*addDesc)
+	parseDir(".", *recursive, *addDesc, goVal, &goDataMap)
+
+	tabwriterBasic(goVal)
+	tabwriterAdditional(*addDesc, goDataMap)
 }
 
-func tabwriterBasic() {
+func tabwriterBasic(goVal *GoVal) {
 	w := new(tabwriter.Writer)
 	w.Init(os.Stdout, 0, 8, 3, '\t', tabwriter.TabIndent)
 	fmt.Fprintln(w, "Packages\tFiles\tFunctions\tInternal\tExported\tNo docs\tWith docs\t")
@@ -41,7 +41,7 @@ func tabwriterBasic() {
 	w.Flush()
 }
 
-func tabwriterAdditional(addDesc bool) {
+func tabwriterAdditional(addDesc bool, goDataMap [] GoData) {
 	if addDesc {
 		wx := new(tabwriter.Writer)
 		wx.Init(os.Stdout, 0, 8, 3, '\t', tabwriter.TabIndent)
@@ -57,7 +57,7 @@ func tabwriterAdditional(addDesc bool) {
 	}
 }
 
-func parseDir(dir string, recursive bool, addDesc bool) {
+func parseDir(dir string, recursive bool, addDesc bool, goVal *GoVal, goDataMap *[] GoData) {
 	dirFile, err := os.Open(dir)
 	if err != nil {
 		util.ShowError(err)
@@ -102,7 +102,7 @@ func parseDir(dir string, recursive bool, addDesc bool) {
 						goData.End = fset.Position(fn.End()).Line
 						goData.Lines = (fset.Position(fn.End()).Line - fset.Position(fn.Pos()).Line) + 1
 
-						goDataMap = append(goDataMap, goData)
+						*goDataMap = append(*goDataMap, *goData)
 					}
 
 					if fn.Doc.Text() == "" {
@@ -129,7 +129,7 @@ func parseDir(dir string, recursive bool, addDesc bool) {
 		}
 		for _, info := range dirs {
 			if info.IsDir() {
-				parseDir(filepath.Join(dir, info.Name()), recursive, addDesc)
+				parseDir(filepath.Join(dir, info.Name()), recursive, addDesc, goVal, goDataMap)
 			}
 		}
 	}
